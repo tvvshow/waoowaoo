@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSignedUrl, toFetchableUrl } from '@/lib/cos'
+import * as fs from 'fs/promises'
+import { getSignedUrl, toFetchableUrl, getLocalStorageFilePath } from '@/lib/cos'
 import { getMediaObjectByPublicId } from '@/lib/media/service'
 
 export const runtime = 'nodejs'
@@ -38,6 +39,23 @@ export async function GET(
         'Cache-Control': 'public, max-age=31536000, immutable',
       },
     })
+  }
+
+  const localFilePath = getLocalStorageFilePath(media.storageKey)
+  if (localFilePath !== null) {
+    let fileBuffer: Buffer
+    try {
+      fileBuffer = await fs.readFile(localFilePath)
+    } catch {
+      return NextResponse.json({ error: 'Media file not found on disk' }, { status: 404 })
+    }
+    const contentType = media.mimeType || 'application/octet-stream'
+    const headers = new Headers()
+    headers.set('Content-Type', contentType)
+    headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+    headers.set('ETag', etag)
+    headers.set('Content-Length', String(fileBuffer.length))
+    return new Response(fileBuffer, { status: 200, headers })
   }
 
   const fetchUrl = toFetchableUrl(getSignedUrl(media.storageKey))

@@ -581,6 +581,15 @@ export async function downloadAndUploadVideoToCOS(
 }
 
 /**
+ * 本地存储模式下，返回存储 key 对应的绝对文件路径。
+ * COS 模式下返回 null。
+ */
+export function getLocalStorageFilePath(key: string): string | null {
+  if (!isLocalStorage) return null
+  return path.resolve(UPLOAD_DIR, key)
+}
+
+/**
  * 生成唯一的文件名
  * @param prefix 前缀（例如：character, location, shot）
  * @param ext 扩展名（例如：png, jpg）
