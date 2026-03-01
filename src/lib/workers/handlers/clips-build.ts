@@ -12,7 +12,8 @@ import { buildPrompt, PROMPT_IDS } from '@/lib/prompt-i18n'
 import { resolveAnalysisModel } from './resolve-analysis-model'
 
 function parseClipArrayResponse(responseText: string): Array<Record<string, unknown>> {
-  let cleaned = responseText.trim()
+  // Strip <think>...</think> reasoning blocks (thinking models like Grok)
+  let cleaned = responseText.trim().replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
   cleaned = cleaned
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/, '')

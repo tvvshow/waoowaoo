@@ -36,7 +36,8 @@ export function chunkContent(text: string, maxSize = CHUNK_SIZE): string[] {
 }
 
 export function parseJsonResponse(responseText: string): Record<string, unknown> {
-  let cleanedText = responseText.trim()
+  // Strip <think>...</think> reasoning blocks (thinking models like Grok)
+  let cleanedText = responseText.trim().replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
   cleanedText = cleanedText.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '')
   const firstBrace = cleanedText.indexOf('{')
   const lastBrace = cleanedText.lastIndexOf('}')

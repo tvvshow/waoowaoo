@@ -15,7 +15,8 @@ export function readRequiredString(value: unknown, field: string): string {
 }
 
 export function parseVisualResponse(responseText: string): AnyObj {
-  let cleaned = responseText.trim()
+  // Strip <think>...</think> reasoning blocks (thinking models like Grok)
+  let cleaned = responseText.trim().replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
   cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '')
   const firstBrace = cleaned.indexOf('{')
   const lastBrace = cleaned.lastIndexOf('}')

@@ -13,7 +13,8 @@ export function readRequiredString(value: unknown, field: string): string {
 }
 
 export function parseJsonObject(responseText: string): AnyObj {
-  let cleaned = responseText.trim()
+  // Strip <think>...</think> reasoning blocks (thinking models like Grok)
+  let cleaned = responseText.trim().replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
   cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '')
   const match = cleaned.match(/\{[\s\S]*\}/)
   if (!match) {
@@ -44,7 +45,8 @@ export function parseShotPromptResponse(responseText: string): {
     // fall through
   }
 
-  let cleaned = responseText.trim()
+  // Strip <think>...</think> blocks before fallback regex (thinking models like Grok)
+  let cleaned = responseText.trim().replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
   const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
   if (!jsonMatch) {
     throw new Error('No JSON found in response')

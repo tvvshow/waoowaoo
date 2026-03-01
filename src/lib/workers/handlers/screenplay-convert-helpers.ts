@@ -71,7 +71,9 @@ function escapeControlCharsInJsonStrings(input: string): string {
 }
 
 export function parseScreenplayPayload(responseText: string): AnyObj {
-  const cleaned = stripMarkdownCodeFence(responseText.trim())
+  // Strip <think>...</think> reasoning blocks (thinking models like Grok)
+  const stripped = responseText.trim().replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+  const cleaned = stripMarkdownCodeFence(stripped)
   const firstBrace = cleaned.indexOf('{')
   const lastBrace = cleaned.lastIndexOf('}')
   if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {

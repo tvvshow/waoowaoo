@@ -43,7 +43,9 @@ function cleanJsonStringForParse(input: string): string {
 }
 
 function parseSplitResponse(aiResponse: string): SplitResponse {
-  const jsonMatch = aiResponse.match(/```json\s*([\s\S]*?)\s*```/) || aiResponse.match(/\{[\s\S]*\}/)
+  // Strip <think>...</think> reasoning blocks (thinking models like Grok)
+  const stripped = aiResponse.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+  const jsonMatch = stripped.match(/```json\s*([\s\S]*?)\s*```/) || stripped.match(/\{[\s\S]*\}/)
   if (!jsonMatch) {
     throw new Error('Failed to parse AI response: missing JSON payload')
   }

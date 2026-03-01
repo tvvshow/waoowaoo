@@ -18,7 +18,7 @@ function readRequiredString(value: unknown, field: string): string {
 }
 
 function parseJsonPrompt(responseText: string): string {
-  let cleaned = responseText.trim()
+  let cleaned = responseText.trim().replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
   cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '')
   const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
   if (!jsonMatch) {

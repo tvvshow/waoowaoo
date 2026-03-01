@@ -49,7 +49,8 @@ function parsePanelCharacters(raw: string | null): string[] {
 }
 
 export function parseVoiceLinesJson(responseText: string): JsonRecord[] {
-  let jsonText = responseText.trim()
+  // Strip <think>...</think> reasoning blocks (thinking models like Grok)
+  let jsonText = responseText.trim().replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
   jsonText = jsonText.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '')
   const firstBracket = jsonText.indexOf('[')
   const lastBracket = jsonText.lastIndexOf(']')
