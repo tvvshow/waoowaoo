@@ -91,8 +91,14 @@ function applyTemplate(template: string, replacements: Record<string, string>) {
   return next
 }
 
+// Strip <think>...</think> reasoning blocks emitted by thinking models (e.g. Grok)
+// before any JSON extraction to prevent finding `{` inside reasoning content.
+function stripThinkingBlocks(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+}
+
 function parseJSONObject(responseText: string): Record<string, unknown> {
-  let cleaned = responseText.trim()
+  let cleaned = stripThinkingBlocks(responseText.trim())
   cleaned = cleaned
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/, '')
@@ -117,7 +123,7 @@ function parseJSONObject(responseText: string): Record<string, unknown> {
 }
 
 function parseClipArray(responseText: string): Record<string, unknown>[] {
-  let cleaned = responseText.trim()
+  let cleaned = stripThinkingBlocks(responseText.trim())
   cleaned = cleaned
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/, '')
@@ -270,7 +276,7 @@ function fixUnescapedQuotesInJson(input: string): string {
 }
 
 function parseScreenplayObject(responseText: string): Record<string, unknown> {
-  let cleaned = responseText.trim()
+  let cleaned = stripThinkingBlocks(responseText.trim())
   cleaned = cleaned
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/, '')
