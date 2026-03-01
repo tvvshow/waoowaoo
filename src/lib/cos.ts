@@ -590,6 +590,27 @@ export function getLocalStorageFilePath(key: string): string | null {
 }
 
 /**
+ * 本地存储模式下，从 /api/files/{encodedKey} 路径（相对或绝对URL）中反解出存储 key。
+ * 非本地模式或路径不匹配时返回 null。
+ */
+export function storageKeyFromLocalUrl(url: string): string | null {
+  if (!isLocalStorage) return null
+  const API_FILES_PREFIX = '/api/files/'
+  let pathname: string | null = null
+  if (url.startsWith(API_FILES_PREFIX)) {
+    pathname = url
+  } else if (url.startsWith('http://') || url.startsWith('https://')) {
+    try {
+      pathname = new URL(url).pathname
+    } catch {
+      return null
+    }
+  }
+  if (!pathname?.startsWith(API_FILES_PREFIX)) return null
+  return decodeURIComponent(pathname.slice(API_FILES_PREFIX.length))
+}
+
+/**
  * 生成唯一的文件名
  * @param prefix 前缀（例如：character, location, shot）
  * @param ext 扩展名（例如：png, jpg）

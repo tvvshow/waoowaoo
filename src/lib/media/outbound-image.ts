@@ -1,8 +1,9 @@
 import path from 'node:path'
+import * as fsPromises from 'fs/promises'
 import { createScopedLogger } from '@/lib/logging/core'
 import { resolveStorageKeyFromMediaValue } from '@/lib/media/service'
 
-type CosHelpers = Pick<typeof import('@/lib/cos'), 'getSignedUrl' | 'toFetchableUrl'>
+type CosHelpers = Pick<typeof import('@/lib/cos'), 'getSignedUrl' | 'toFetchableUrl' | 'getLocalStorageFilePath' | 'storageKeyFromLocalUrl'>
 
 type InputIssueReason =
   | 'next_image_unwrapped'
@@ -90,6 +91,8 @@ async function getCosHelpers(): Promise<CosHelpers> {
     cosHelpersPromise = import('@/lib/cos').then((mod) => ({
       getSignedUrl: mod.getSignedUrl,
       toFetchableUrl: mod.toFetchableUrl,
+      getLocalStorageFilePath: mod.getLocalStorageFilePath,
+      storageKeyFromLocalUrl: mod.storageKeyFromLocalUrl,
     }))
   }
   return await cosHelpersPromise
@@ -284,6 +287,28 @@ export async function normalizeToBase64ForGeneration(input: string): Promise<str
   const normalizedUrl = await normalizeToOriginalMediaUrl(input)
   if (isDataUrl(normalizedUrl)) {
     return normalizedUrl
+  }
+
+  // Local storage fast path: read from disk to avoid container→external-HTTPS loopback failure
+  const { storageKeyFromLocalUrl, getLocalStorageFilePath } = await getCosHelpers()
+  const localKey = storageKeyFromLocalUrl(input) ?? storageKeyFromLocalUrl(normalizedUrl)
+  if (localKey !== null) {
+    const filePath = getLocalStorageFilePath(localKey)
+    if (filePath !== null) {
+      let fileBuffer: Buffer
+      try {
+        fileBuffer = await fsPromises.readFile(filePath)
+      } catch {
+        throw new OutboundImageNormalizeError({
+          code: 'OUTBOUND_IMAGE_FETCH_FAILED',
+          stage: 'normalize_base64',
+          input: normalizedUrl,
+          message: `normalizeToBase64ForGeneration local file not found: ${filePath}`,
+        })
+      }
+      const mimeType = guessContentType(localKey, null)
+      return `data:${mimeType};base64,${fileBuffer.toString('base64')}`
+    }
   }
 
   const fetchUrl = await toFetchableAbsoluteUrl(normalizedUrl)
