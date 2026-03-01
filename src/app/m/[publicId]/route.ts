@@ -55,7 +55,7 @@ export async function GET(
     headers.set('Cache-Control', 'public, max-age=31536000, immutable')
     headers.set('ETag', etag)
     headers.set('Content-Length', String(fileBuffer.length))
-    return new Response(fileBuffer, { status: 200, headers })
+    return new Response(new Uint8Array(fileBuffer), { status: 200, headers })
   }
 
   const fetchUrl = toFetchableUrl(getSignedUrl(media.storageKey))
