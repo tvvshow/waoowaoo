@@ -9,13 +9,12 @@ import { logInfo as _ulogInfo } from '@/lib/logging/core'
  */
 
 import { createAudioGenerator, createImageGenerator, createVideoGenerator } from './generators/factory'
-import type { GenerateResult, ImageGenerator } from './generators/base'
-import { resolveModelSelection, getProviderKey, getProviderConfig } from './api-config'
-import { GrokArtProxyImageGenerator } from './generators/image/grok-art-proxy'
+import type { GenerateResult } from './generators/base'
+import { resolveModelSelection } from './api-config'
 
 /**
  * 生成图片（简化版）
- * 
+ *
  * @param userId 用户 ID
  * @param modelKey 模型唯一键（provider::modelId）
  * @param prompt 提示词
@@ -37,24 +36,7 @@ export async function generateImage(
     const selection = await resolveModelSelection(userId, modelKey, 'image')
     _ulogInfo(`[generateImage] resolved model selection: ${selection.modelKey}`)
 
-    // When an openai-compatible provider is actually serving grok-art-proxy, the standard
-    // OpenAI SDK path calls /v1/images/edits for img2img which doesn't exist there.
-    // Detect by model ID containing 'grok' (fast, no extra DB query), or fall back to
-    // checking the provider name.
-    let generator: ImageGenerator
-    const providerKey = getProviderKey(selection.provider)
-    if (providerKey === 'openai-compatible') {
-        let useGrokArtProxy = selection.modelId.toLowerCase().includes('grok')
-        if (!useGrokArtProxy) {
-            const cfg = await getProviderConfig(userId, selection.provider)
-            useGrokArtProxy = cfg.name.toLowerCase().includes('grok-art-proxy')
-        }
-        generator = useGrokArtProxy
-            ? new GrokArtProxyImageGenerator(selection.modelId, selection.provider)
-            : createImageGenerator(selection.provider, selection.modelId)
-    } else {
-        generator = createImageGenerator(selection.provider, selection.modelId)
-    }
+    const generator = createImageGenerator(selection.provider, selection.modelId)
 
     // 调用生成（提取 referenceImages 单独传递，其余选项合并进 options）
     const { referenceImages, ...generatorOptions } = options || {}
