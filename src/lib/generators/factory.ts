@@ -15,6 +15,7 @@ import {
     GoogleGeminiBatchImageGenerator,
     GeminiCompatibleImageGenerator,
     OpenAICompatibleImageGenerator,
+    GrokArtProxyImageGenerator,
 } from './image'
 import { GoogleVeoVideoGenerator } from './video/google'
 import { OpenAICompatibleVideoGenerator } from './video'
@@ -58,7 +59,7 @@ export function createImageGenerator(provider: string, modelId?: string): ImageG
         case 'openai-compatible':
             return new OpenAICompatibleImageGenerator(actualModelId, provider)
         case 'grok-art-proxy':
-            return new OpenAICompatibleImageGenerator(actualModelId, provider)
+            return new GrokArtProxyImageGenerator(actualModelId, provider)
         default:
             throw new Error(`Unknown image generator provider: ${provider}`)
     }

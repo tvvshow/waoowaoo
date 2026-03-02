@@ -10,6 +10,7 @@
 export { GoogleGeminiImageGenerator, GoogleImagenGenerator, GoogleGeminiBatchImageGenerator } from './google'
 export { GeminiCompatibleImageGenerator } from './gemini-compatible'
 export { OpenAICompatibleImageGenerator } from './openai-compatible'
+export { GrokArtProxyImageGenerator } from './grok-art-proxy'
 
 
 // 向后兼容：从合并文件重新导出
