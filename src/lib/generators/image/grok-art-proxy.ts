@@ -7,7 +7,7 @@
 
 import OpenAI from 'openai'
 import { BaseImageGenerator, type GenerateResult, type ImageGenerateParams } from '../base'
-import { getProviderConfig } from '@/lib/api-config'
+import { getProviderConfig, getProviderKey } from '@/lib/api-config'
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
@@ -114,13 +114,20 @@ export class GrokArtProxyImageGenerator extends BaseImageGenerator {
       throw new Error(`PROVIDER_BASE_URL_MISSING: ${config.id}`)
     }
 
-    const baseUrl = normalizeBaseUrl(config.baseUrl)
+    const rawUrl = normalizeBaseUrl(config.baseUrl)
+
+    // openai-compatible providers have /v1 auto-appended by normalizeProviderBaseUrl.
+    // For img2img we need the root URL (no /v1); for the OpenAI SDK the /v1 must be present.
+    // grok-art-proxy provider type stores the raw URL without /v1.
+    const isOpenAICompatType = getProviderKey(providerId) === 'openai-compatible'
+    const rootUrl = isOpenAICompatType ? rawUrl.replace(/\/v1$/, '') : rawUrl
+    const apiBaseUrl = isOpenAICompatType ? rawUrl : `${rawUrl}/v1`
 
     if (referenceImages.length > 0) {
       // img2img: call /api/imagine/img2img with base64 data URL
       const imageData = referenceImages[0] // already a base64 data URL from normalizeReferenceImagesForGeneration
 
-      const response = await fetch(`${baseUrl}/api/imagine/img2img`, {
+      const response = await fetch(`${rootUrl}/api/imagine/img2img`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -139,7 +146,7 @@ export class GrokArtProxyImageGenerator extends BaseImageGenerator {
         throw new Error(`GROK_ART_PROXY_IMG2IMG_FAILED (${response.status}): ${errorText}`)
       }
 
-      const urls = await collectImagesFromSSE(response, baseUrl)
+      const urls = await collectImagesFromSSE(response, rootUrl)
       if (urls.length === 0) {
         throw new Error('GROK_ART_PROXY_IMG2IMG_EMPTY: no images returned')
       }
@@ -151,7 +158,7 @@ export class GrokArtProxyImageGenerator extends BaseImageGenerator {
 
       const client = new OpenAI({
         apiKey: config.apiKey,
-        baseURL: baseUrl,
+        baseURL: apiBaseUrl,
       })
 
       const model = (this.modelId ?? 'grok-imagine-1.0').trim()
