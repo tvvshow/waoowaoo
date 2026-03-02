@@ -132,6 +132,7 @@ export class GrokArtProxyImageGenerator extends BaseImageGenerator {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${config.apiKey}`,
+          'Cookie': `auth_token=${config.apiKey}`,
         },
         body: JSON.stringify({
           image_data: imageData,

@@ -9,8 +9,9 @@ import { logInfo as _ulogInfo } from '@/lib/logging/core'
  */
 
 import { createAudioGenerator, createImageGenerator, createVideoGenerator } from './generators/factory'
-import type { GenerateResult } from './generators/base'
-import { resolveModelSelection } from './api-config'
+import type { GenerateResult, ImageGenerator } from './generators/base'
+import { resolveModelSelection, getProviderKey, getProviderConfig } from './api-config'
+import { GrokArtProxyImageGenerator } from './generators/image/grok-art-proxy'
 
 /**
  * 生成图片（简化版）
@@ -36,7 +37,24 @@ export async function generateImage(
     const selection = await resolveModelSelection(userId, modelKey, 'image')
     _ulogInfo(`[generateImage] resolved model selection: ${selection.modelKey}`)
 
-    const generator = createImageGenerator(selection.provider, selection.modelId)
+    // openai-compatible 提供商背后可能是 grok-art-proxy。
+    // grok-art-proxy 的图生图接口是 /api/imagine/img2img（非 /v1/images/edits），
+    // 需要路由到 GrokArtProxyImageGenerator 来正确调用。
+    // 检测方式：model ID 含 'grok'（快速），或回落到检查 provider 名称。
+    let generator: ImageGenerator
+    const providerKey = getProviderKey(selection.provider)
+    if (providerKey === 'openai-compatible') {
+        let useGrokArtProxy = selection.modelId.toLowerCase().includes('grok')
+        if (!useGrokArtProxy) {
+            const cfg = await getProviderConfig(userId, selection.provider)
+            useGrokArtProxy = cfg.name.toLowerCase().includes('grok-art-proxy')
+        }
+        generator = useGrokArtProxy
+            ? new GrokArtProxyImageGenerator(selection.modelId, selection.provider)
+            : createImageGenerator(selection.provider, selection.modelId)
+    } else {
+        generator = createImageGenerator(selection.provider, selection.modelId)
+    }
 
     // 调用生成（提取 referenceImages 单独传递，其余选项合并进 options）
     const { referenceImages, ...generatorOptions } = options || {}
