@@ -36,12 +36,18 @@ export function MediaImage({
   if (!src) return null
 
   if (isStableMediaRoute(src)) {
+    // unoptimized: bypass /_next/image optimizer which makes a server-side
+    // loopback fetch using the external Host header. Inside Docker the
+    // container cannot reach its own external URL, causing "received null".
+    // With unoptimized the browser fetches /m/... directly from the route
+    // handler which reads the file from disk.
     if (fill) {
       return (
         <Image
           src={src}
           alt={alt}
           fill
+          unoptimized
           sizes={sizes || '100vw'}
           priority={priority}
           className={className}
@@ -58,6 +64,7 @@ export function MediaImage({
         alt={alt}
         width={width}
         height={height}
+        unoptimized
         sizes={sizes}
         priority={priority}
         className={className}
