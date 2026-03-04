@@ -165,7 +165,7 @@ export async function handlePanelVariantTask(job: Job<TaskJobData>) {
   _ulogInfo('[panel-variant] resolved variant prompt', prompt)
 
   await assertTaskActive(job, 'generate_panel_variant_image')
-  const source = await resolveImageSourceFromGeneration(job, {
+  const { source } = await resolveImageSourceFromGeneration(job, {
     userId: job.data.userId,
     modelId: storyboardModel,
     prompt,

@@ -95,6 +95,32 @@ async function collectImagesFromSSE(
   return imageUrls
 }
 
+/**
+ * Download an image URL with grok-art-proxy auth headers and return base64.
+ * Proxy URLs under /api/* require cookie auth; direct URLs are tried with auth as well (harmless).
+ */
+async function fetchImageAsBase64(url: string, apiKey: string): Promise<string> {
+  const resp = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Cookie': `auth_token=${apiKey}`,
+    },
+  })
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => '')
+    throw new Error(`GROK_ART_PROXY_IMAGE_DOWNLOAD_FAILED (${resp.status}): ${errText}`)
+  }
+  const buf = Buffer.from(await resp.arrayBuffer())
+  if (buf.length < 1000) {
+    // Sanity check: real images are at least a few KB
+    const text = buf.toString('utf-8').trim()
+    if (text.startsWith('{')) {
+      throw new Error(`GROK_ART_PROXY_IMAGE_DOWNLOAD_NOT_IMAGE: ${text}`)
+    }
+  }
+  return buf.toString('base64')
+}
+
 export class GrokArtProxyImageGenerator extends BaseImageGenerator {
   private readonly modelId?: string
   private readonly providerId?: string
@@ -152,7 +178,22 @@ export class GrokArtProxyImageGenerator extends BaseImageGenerator {
         throw new Error('GROK_ART_PROXY_IMG2IMG_EMPTY: no images returned')
       }
 
-      return { success: true, imageUrl: urls[0] }
+      // Download the image with auth headers (proxy URLs require cookie auth)
+      const imageBase64 = await fetchImageAsBase64(urls[0], config.apiKey)
+
+      // Extract original Grok URL from proxy URL for video generation
+      // Proxy URLs: {host}/api/imagine/proxy?url={encodedGrokUrl}&token_id=...
+      let grokImageUrl = ''
+      try {
+        const proxyUrl = new URL(urls[0])
+        grokImageUrl = proxyUrl.searchParams.get('url') || ''
+      } catch { /* non-proxy URL, ignore */ }
+
+      return {
+        success: true, imageBase64,
+        imageUrl: `data:image/jpeg;base64,${imageBase64}`,
+        ...(grokImageUrl ? { metadata: { grokImageUrl } } : {}),
+      }
     } else {
       // text-to-image: use OpenAI-compatible /v1/images/generations
       const rawSize = (options.size as string | undefined) || (options.resolution as string | undefined)
@@ -176,7 +217,17 @@ export class GrokArtProxyImageGenerator extends BaseImageGenerator {
         throw new Error('GROK_ART_PROXY_IMAGE_EMPTY: no image URL returned')
       }
 
-      return { success: true, imageUrl }
+      // Download the image with auth headers (proxy URLs require cookie auth)
+      const imageBase64 = await fetchImageAsBase64(imageUrl, config.apiKey)
+
+      // imageUrl from grok-art-proxy's /v1/images/generations is the raw Grok URL
+      // (e.g., https://assets.grok.com/users/{userId}/generated/{uuid}.jpg)
+      // Save it for video generation which needs a Grok-recognized URL.
+      return {
+        success: true, imageBase64,
+        imageUrl: `data:image/jpeg;base64,${imageBase64}`,
+        metadata: { grokImageUrl: imageUrl },
+      }
     }
   }
 }

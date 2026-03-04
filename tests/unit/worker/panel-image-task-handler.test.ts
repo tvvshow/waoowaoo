@@ -99,8 +99,8 @@ describe('worker panel-image-task-handler behavior', () => {
     })
 
     utilsMock.resolveImageSourceFromGeneration
-      .mockResolvedValueOnce('generated-source-1')
-      .mockResolvedValueOnce('generated-source-2')
+      .mockResolvedValueOnce({ source: 'generated-source-1' })
+      .mockResolvedValueOnce({ source: 'generated-source-2' })
 
     utilsMock.uploadImageSourceToCos
       .mockResolvedValueOnce('cos/panel-candidate-1.png')
@@ -164,7 +164,7 @@ describe('worker panel-image-task-handler behavior', () => {
       imageUrl: 'cos/panel-old.png',
     })
 
-    utilsMock.resolveImageSourceFromGeneration.mockResolvedValueOnce('generated-source-regen')
+    utilsMock.resolveImageSourceFromGeneration.mockResolvedValueOnce({ source: 'generated-source-regen' })
     utilsMock.uploadImageSourceToCos.mockResolvedValueOnce('cos/panel-regenerated.png')
 
     const job = buildJob({ candidateCount: 1 })

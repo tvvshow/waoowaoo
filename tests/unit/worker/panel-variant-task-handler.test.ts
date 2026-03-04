@@ -12,7 +12,7 @@ const prismaMock = vi.hoisted(() => ({
 const utilsMock = vi.hoisted(() => ({
   assertTaskActive: vi.fn(async () => undefined),
   getProjectModels: vi.fn(async () => ({ storyboardModel: 'storyboard-model-1', artStyle: 'cinematic' })),
-  resolveImageSourceFromGeneration: vi.fn(async () => 'generated-variant-source'),
+  resolveImageSourceFromGeneration: vi.fn(async () => ({ source: 'generated-variant-source' })),
   toSignedUrlIfCos: vi.fn((url: string | null | undefined) => (url ? `https://signed.example/${url}` : null)),
   uploadImageSourceToCos: vi.fn(async () => 'cos/panel-variant-new.png'),
 }))

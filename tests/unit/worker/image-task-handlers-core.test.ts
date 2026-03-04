@@ -6,7 +6,7 @@ const utilsMock = vi.hoisted(() => ({
   assertTaskActive: vi.fn(async () => {}),
   getProjectModels: vi.fn(async () => ({ editModel: 'edit-model' })),
   getUserModels: vi.fn(async () => ({ editModel: 'edit-model', analysisModel: 'analysis-model' })),
-  resolveImageSourceFromGeneration: vi.fn(async () => 'generated-image-source'),
+  resolveImageSourceFromGeneration: vi.fn(async () => ({ source: 'generated-image-source' })),
   stripLabelBar: vi.fn(async () => 'required-reference-image'),
   toSignedUrlIfCos: vi.fn(() => 'https://signed/current-image.png'),
   uploadImageSourceToCos: vi.fn(async () => 'cos/new-image.png'),

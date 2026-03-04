@@ -107,7 +107,7 @@ export async function generateLabeledImageToCos(params: {
     size?: string
   }
 }) {
-  const source = await resolveImageSourceFromGeneration(params.job, {
+  const { source } = await resolveImageSourceFromGeneration(params.job, {
     userId: params.userId,
     modelId: params.modelId,
     prompt: params.prompt,

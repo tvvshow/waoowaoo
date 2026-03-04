@@ -228,6 +228,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
   })
 
   const candidates: string[] = []
+  let lastGrokImageUrl: string | undefined
 
   for (let i = 0; i < candidateCount; i++) {
     await reportTaskProgress(job, 18 + Math.floor((i / Math.max(candidateCount, 1)) * 58), {
@@ -235,7 +236,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       candidateIndex: i,
     })
 
-    const source = await resolveImageSourceFromGeneration(job, {
+    const { source, metadata } = await resolveImageSourceFromGeneration(job, {
       userId: job.data.userId,
       modelId: modelKey,
       prompt,
@@ -246,9 +247,19 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       pollProgress: { start: 30, end: 90 },
     })
 
+    // Capture original Grok image URL for video generation (grok-art-proxy only)
+    if (metadata?.grokImageUrl) {
+      lastGrokImageUrl = metadata.grokImageUrl
+    }
+
     const cosKey = await uploadImageSourceToCos(source, 'panel-candidate', `${panel.id}-${i}`)
     candidates.push(cosKey)
   }
+
+  // Store grokImageUrl in imageHistory for later video generation
+  const imageHistoryData = lastGrokImageUrl
+    ? JSON.stringify({ grokImageUrl: lastGrokImageUrl })
+    : undefined
 
   const isFirstGeneration = !panel.imageUrl
 
@@ -259,6 +270,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       data: {
         imageUrl: candidates[0] || null,
         candidateImages: candidateCount > 1 ? JSON.stringify(candidates) : null,
+        ...(imageHistoryData ? { imageHistory: imageHistoryData } : {}),
       },
     })
   } else {
@@ -267,6 +279,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       data: {
         previousImageUrl: panel.imageUrl,
         candidateImages: JSON.stringify(candidates),
+        ...(imageHistoryData ? { imageHistory: imageHistoryData } : {}),
       },
     })
   }

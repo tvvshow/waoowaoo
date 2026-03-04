@@ -12,6 +12,7 @@ import { createAudioGenerator, createImageGenerator, createVideoGenerator } from
 import type { GenerateResult, ImageGenerator } from './generators/base'
 import { resolveModelSelection, getProviderKey, getProviderConfig } from './api-config'
 import { GrokArtProxyImageGenerator } from './generators/image/grok-art-proxy'
+import { GrokArtProxyVideoGenerator } from './generators/video/grok-art-proxy'
 
 /**
  * 生成图片（简化版）
@@ -95,8 +96,25 @@ export async function generateVideo(
     }
 ): Promise<GenerateResult> {
     const selection = await resolveModelSelection(userId, modelKey, 'video')
-    const generator = createVideoGenerator(selection.provider)
     _ulogInfo(`[generateVideo] resolved model selection: ${selection.modelKey}`)
+
+    // openai-compatible 提供商背后可能是 grok-art-proxy。
+    // grok-art-proxy 视频端点是 /v1/videos/generations（非标准 /v1/videos），
+    // 需要路由到 GrokArtProxyVideoGenerator 来正确调用。
+    let generator
+    const providerKey = getProviderKey(selection.provider)
+    if (providerKey === 'openai-compatible') {
+        let useGrokArtProxy = selection.modelId.toLowerCase().includes('grok')
+        if (!useGrokArtProxy) {
+            const cfg = await getProviderConfig(userId, selection.provider)
+            useGrokArtProxy = cfg.name.toLowerCase().includes('grok-art-proxy')
+        }
+        generator = useGrokArtProxy
+            ? new GrokArtProxyVideoGenerator(selection.provider)
+            : createVideoGenerator(selection.provider)
+    } else {
+        generator = createVideoGenerator(selection.provider)
+    }
 
     const { prompt, ...providerOptions } = options || {}
 

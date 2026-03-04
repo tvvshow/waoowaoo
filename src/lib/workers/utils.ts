@@ -160,6 +160,11 @@ export async function waitExternalResult(
   throw new Error(`External task polling timeout (${Math.round(timeoutMs / 1000)}s): ${externalId}`)
 }
 
+export interface ImageSourceResult {
+  source: string
+  metadata?: Record<string, string>
+}
+
 export async function resolveImageSourceFromGeneration(
   job: Job<TaskJobData>,
   params: {
@@ -175,7 +180,7 @@ export async function resolveImageSourceFromGeneration(
     }
     pollProgress?: { start?: number; end?: number }
   },
-): Promise<string> {
+): Promise<ImageSourceResult> {
   const logger = scopedWorkerUtilLogger(job, 'worker.image.generate_source')
   const startedAt = Date.now()
 
@@ -190,7 +195,7 @@ export async function resolveImageSourceFromGeneration(
       progressStart: params.pollProgress?.start ?? 40,
       progressEnd: params.pollProgress?.end ?? 92,
     })
-    return polled.url
+    return { source: polled.url }
   }
 
   logger.info({
@@ -241,7 +246,7 @@ export async function resolveImageSourceFromGeneration(
       provider: params.options?.provider || undefined,
       durationMs: Date.now() - startedAt,
     })
-    return result.imageUrl
+    return { source: result.imageUrl, metadata: result.metadata }
   }
   if (result.imageBase64) {
     logger.info({
@@ -249,7 +254,7 @@ export async function resolveImageSourceFromGeneration(
       provider: params.options?.provider || undefined,
       durationMs: Date.now() - startedAt,
     })
-    return `data:image/png;base64,${result.imageBase64}`
+    return { source: `data:image/png;base64,${result.imageBase64}`, metadata: result.metadata }
   }
 
   const externalId = normalizeExternalId(result, 'IMAGE')
@@ -269,7 +274,7 @@ export async function resolveImageSourceFromGeneration(
       externalId,
     },
   })
-  return polled.url
+  return { source: polled.url }
 }
 
 export async function resolveVideoSourceFromGeneration(

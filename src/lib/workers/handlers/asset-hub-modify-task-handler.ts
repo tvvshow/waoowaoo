@@ -111,7 +111,7 @@ export async function handleAssetHubModifyTask(job: Job<TaskJobData>) {
     const referenceImages = Array.from(new Set([requiredReference, ...normalizedExtras]))
 
     const prompt = `请根据以下指令修改图片，保持人物核心特征一致：\n${payload.modifyPrompt || ''}`
-    const source = await resolveImageSourceFromGeneration(job, {
+    const { source } = await resolveImageSourceFromGeneration(job, {
       userId,
       modelId: editModel,
       prompt,
@@ -194,7 +194,7 @@ export async function handleAssetHubModifyTask(job: Job<TaskJobData>) {
     const referenceImages = Array.from(new Set([requiredReference, ...normalizedExtras]))
 
     const prompt = `请根据以下指令修改场景图片，保持整体风格一致：\n${payload.modifyPrompt || ''}`
-    const source = await resolveImageSourceFromGeneration(job, {
+    const { source } = await resolveImageSourceFromGeneration(job, {
       userId,
       modelId: editModel,
       prompt,
