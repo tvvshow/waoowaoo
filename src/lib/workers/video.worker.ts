@@ -100,16 +100,8 @@ async function generateVideoForPanel(
   }
   const sourceImageBase64 = await normalizeToBase64ForGeneration(sourceImageUrl)
 
-  // Read stored Grok image URL from imageHistory for grok-art-proxy video generation
-  let grokImageUrl: string | undefined
-  if (panel.imageHistory) {
-    try {
-      const history = JSON.parse(panel.imageHistory) as { grokImageUrl?: string }
-      if (history.grokImageUrl) {
-        grokImageUrl = history.grokImageUrl
-      }
-    } catch { /* ignore parse errors */ }
-  }
+  // Original Grok image URL stored during image generation (for grok-art-proxy video)
+  const grokImageUrl = panel.grokImageUrl || undefined
 
   let lastFrameImageBase64: string | undefined
   const generationMode: VideoGenerationMode = firstLastFramePayload ? 'firstlastframe' : 'normal'

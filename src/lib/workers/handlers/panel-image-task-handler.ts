@@ -256,11 +256,6 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
     candidates.push(cosKey)
   }
 
-  // Store grokImageUrl in imageHistory for later video generation
-  const imageHistoryData = lastGrokImageUrl
-    ? JSON.stringify({ grokImageUrl: lastGrokImageUrl })
-    : undefined
-
   const isFirstGeneration = !panel.imageUrl
 
   await assertTaskActive(job, 'persist_panel_image')
@@ -270,7 +265,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       data: {
         imageUrl: candidates[0] || null,
         candidateImages: candidateCount > 1 ? JSON.stringify(candidates) : null,
-        ...(imageHistoryData ? { imageHistory: imageHistoryData } : {}),
+        ...(lastGrokImageUrl ? { grokImageUrl: lastGrokImageUrl } : {}),
       },
     })
   } else {
@@ -279,7 +274,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       data: {
         previousImageUrl: panel.imageUrl,
         candidateImages: JSON.stringify(candidates),
-        ...(imageHistoryData ? { imageHistory: imageHistoryData } : {}),
+        ...(lastGrokImageUrl ? { grokImageUrl: lastGrokImageUrl } : {}),
       },
     })
   }

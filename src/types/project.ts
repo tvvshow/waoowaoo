@@ -180,6 +180,7 @@ export interface NovelPromotionPanel {
   sketchImageMedia?: MediaRef | null
   previousImageUrl?: string | null
   previousImageMedia?: MediaRef | null
+  grokImageUrl?: string | null  // 原始 Grok 图片 URL，用于视频生成
   photographyRules: string | null  // 单镜头摄影规则JSON
   actingNotes: string | null        // 演技指导数据JSON
   // 任务态字段（由 tasks + hook 派生，不再依赖数据库持久化）
