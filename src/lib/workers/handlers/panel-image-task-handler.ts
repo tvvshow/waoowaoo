@@ -11,6 +11,7 @@ import {
   uploadImageSourceToCos,
 } from '../utils'
 import { normalizeReferenceImagesForGeneration } from '@/lib/media/outbound-image'
+import { parseModelKeyStrict } from '@/lib/model-config-contract'
 import {
   AnyObj,
   clampCount,
@@ -150,6 +151,51 @@ function buildPanelPrompt(params: {
   })
 }
 
+function buildGrokPanelPrompt(params: {
+  panel: {
+    shotType: string | null
+    cameraMove: string | null
+    description: string | null
+    videoPrompt: string | null
+    location: string | null
+    characters: string | null
+    srtSegment: string | null
+  }
+  aspectRatio: string
+  styleText: string
+}): string {
+  const parsedCharacters = parsePanelCharacterReferences(params.panel.characters)
+  const characterLine = parsedCharacters.length > 0
+    ? parsedCharacters
+      .map((item) => {
+        const appearance = item.appearance && item.appearance.trim().length > 0
+          ? `(${item.appearance.trim()})`
+          : ''
+        return `${item.name}${appearance}`
+      })
+      .join(', ')
+    : 'none'
+
+  const sceneText = [
+    params.panel.description || '',
+    params.panel.videoPrompt || '',
+    params.panel.srtSegment || '',
+  ]
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .join(' ')
+
+  return [
+    `Create one cinematic storyboard frame in ${params.aspectRatio} ratio.`,
+    `Scene: ${sceneText || 'storyboard scene'}.`,
+    `Camera: shot=${params.panel.shotType || 'medium shot'}, move=${params.panel.cameraMove || 'static'}.`,
+    `Characters: ${characterLine}.`,
+    `Location: ${params.panel.location || 'unspecified'}.`,
+    `Style: ${params.styleText || 'cinematic realistic'}.`,
+    'Hard constraints: no text, no letters, no subtitles, no watermark, no logo, one single frame only.',
+  ].join('\n')
+}
+
 export async function handlePanelImageTask(job: Job<TaskJobData>) {
   const payload = (job.data.payload || {}) as AnyObj
   const panelId = pickFirstString(payload.panelId, job.data.targetId)
@@ -165,10 +211,15 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
   const modelConfig = await getProjectModels(job.data.projectId, job.data.userId)
   const modelKey = modelConfig.storyboardModel
   if (!modelKey) throw new Error('Storyboard model not configured')
+  const parsedStoryboardModel = parseModelKeyStrict(modelKey)
+  const isGrokArtProxyImageModel =
+    parsedStoryboardModel?.provider.startsWith('openai-compatible:') === true
+    && parsedStoryboardModel.modelId.startsWith('grok-image')
 
   const candidateCount = clampCount(payload.candidateCount ?? payload.count, 1, 4, 1)
   const refs = await collectPanelReferenceImages(projectData, panel)
   const normalizedRefs = await normalizeReferenceImagesForGeneration(refs)
+  const referenceImagesForGeneration = isGrokArtProxyImageModel ? [] : normalizedRefs
 
   const logger = createScopedLogger({
     module: 'worker.panel-image',
@@ -186,6 +237,8 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       candidateCount,
       referenceImagesRawCount: refs.length,
       referenceImagesNormalizedCount: normalizedRefs.length,
+      referenceImagesUsedCount: referenceImagesForGeneration.length,
+      referenceImagesSuppressedForGrok: isGrokArtProxyImageModel,
       rawUrls: refs.map((u) => u.substring(0, 100)),
       normalizedUrls: normalizedRefs.map((u) => u.substring(0, 100)),
       panelCharacters: panel.characters,
@@ -197,38 +250,52 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
   const artStyle = getArtStylePrompt(modelConfig.artStyle, job.data.locale)
   if (!projectData.videoRatio) throw new Error('Project videoRatio not configured')
   const aspectRatio = projectData.videoRatio
-  const promptContext = buildPanelPromptContext({
-    panel: {
-      id: panel.id,
-      shotType: panel.shotType,
-      cameraMove: panel.cameraMove,
-      description: panel.description,
-      videoPrompt: panel.videoPrompt,
-      location: panel.location,
-      characters: panel.characters,
-      srtSegment: panel.srtSegment,
-      photographyRules: panel.photographyRules,
-      actingNotes: panel.actingNotes,
-    },
-    projectData,
-  })
-  const contextJson = JSON.stringify(promptContext, null, 2)
-  const prompt = buildPanelPrompt({
-    locale: job.data.locale,
-    aspectRatio,
-    styleText: artStyle || '与参考图风格一致',
-    sourceText: panel.srtSegment || panel.description || '',
-    contextJson,
-  })
+  const prompt = isGrokArtProxyImageModel
+    ? buildGrokPanelPrompt({
+      panel: {
+        shotType: panel.shotType,
+        cameraMove: panel.cameraMove,
+        description: panel.description,
+        videoPrompt: panel.videoPrompt,
+        location: panel.location,
+        characters: panel.characters,
+        srtSegment: panel.srtSegment,
+      },
+      aspectRatio,
+      styleText: artStyle || 'cinematic realistic',
+    })
+    : buildPanelPrompt({
+      locale: job.data.locale,
+      aspectRatio,
+      styleText: artStyle || '与参考图风格一致',
+      sourceText: panel.srtSegment || panel.description || '',
+      contextJson: JSON.stringify(buildPanelPromptContext({
+        panel: {
+          id: panel.id,
+          shotType: panel.shotType,
+          cameraMove: panel.cameraMove,
+          description: panel.description,
+          videoPrompt: panel.videoPrompt,
+          location: panel.location,
+          characters: panel.characters,
+          srtSegment: panel.srtSegment,
+          photographyRules: panel.photographyRules,
+          actingNotes: panel.actingNotes,
+        },
+        projectData,
+      }), null, 2),
+    })
   logger.info({
     message: 'panel image prompt resolved',
     details: {
       promptLength: prompt.length,
+      promptMode: isGrokArtProxyImageModel ? 'grok-video-ready-compact' : 'default-structured',
     },
   })
 
   const candidates: string[] = []
   let lastGrokImageUrl: string | undefined
+  let lastGrokJobId: string | undefined
 
   for (let i = 0; i < candidateCount; i++) {
     await reportTaskProgress(job, 18 + Math.floor((i / Math.max(candidateCount, 1)) * 58), {
@@ -241,7 +308,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       modelId: modelKey,
       prompt,
       options: {
-        referenceImages: normalizedRefs,
+        referenceImages: referenceImagesForGeneration,
         aspectRatio,
       },
       pollProgress: { start: 30, end: 90 },
@@ -251,6 +318,20 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
     if (metadata?.grokImageUrl) {
       lastGrokImageUrl = metadata.grokImageUrl
     }
+    if (metadata?.grokJobId) {
+      lastGrokJobId = metadata.grokJobId
+    }
+    // Debug log to check metadata
+    logger.info({
+      message: 'panel image generation metadata received',
+      details: {
+        hasMetadata: !!metadata,
+        metadataKeys: metadata ? Object.keys(metadata) : [],
+        hasGrokImageUrl: !!metadata?.grokImageUrl,
+        hasGrokJobId: !!metadata?.grokJobId,
+        grokJobId: metadata?.grokJobId || '(none)',
+      },
+    })
 
     const cosKey = await uploadImageSourceToCos(source, 'panel-candidate', `${panel.id}-${i}`)
     candidates.push(cosKey)
@@ -266,6 +347,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
         imageUrl: candidates[0] || null,
         candidateImages: candidateCount > 1 ? JSON.stringify(candidates) : null,
         ...(lastGrokImageUrl ? { grokImageUrl: lastGrokImageUrl } : {}),
+        ...(lastGrokJobId ? { grokJobId: lastGrokJobId } : {}),
       },
     })
   } else {
@@ -275,6 +357,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
         previousImageUrl: panel.imageUrl,
         candidateImages: JSON.stringify(candidates),
         ...(lastGrokImageUrl ? { grokImageUrl: lastGrokImageUrl } : {}),
+        ...(lastGrokJobId ? { grokJobId: lastGrokJobId } : {}),
       },
     })
   }

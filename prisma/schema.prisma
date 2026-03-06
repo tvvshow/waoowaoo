@@ -225,6 +225,7 @@ model NovelPromotionPanel {
   previousImageMediaId String?
   previousImageMedia MediaObject?             @relation("NovelPromotionPanelPreviousImageMedia", fields: [previousImageMediaId], references: [id], onDelete: SetNull)
   grokImageUrl      String?                   @db.Text // 原始 Grok 图片 URL，用于视频生成
+  grokJobId         String?                   @db.VarChar(255) // Grok 图片生成 job_id，用作视频生成的 parent_post_id
   storyboard        NovelPromotionStoryboard  @relation(fields: [storyboardId], references: [id], onDelete: Cascade)
   matchedVoiceLines NovelPromotionVoiceLine[]
 

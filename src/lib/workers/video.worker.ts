@@ -102,6 +102,8 @@ async function generateVideoForPanel(
 
   // Original Grok image URL stored during image generation (for grok-art-proxy video)
   const grokImageUrl = panel.grokImageUrl || undefined
+  // Grok job_id from image generation (used as parent_post_id for grok-art-proxy video)
+  const grokJobId = panel.grokJobId || undefined
 
   let lastFrameImageBase64: string | undefined
   const generationMode: VideoGenerationMode = firstLastFramePayload ? 'firstlastframe' : 'normal'
@@ -154,6 +156,8 @@ async function generateVideoForPanel(
       // Pass the original Grok image URL (stored during image generation) for
       // grok-art-proxy video endpoint which requires a Grok-hosted URL
       ...(grokImageUrl ? { grokImageUrl } : {}),
+      // Pass the Grok job_id as parent_post_id for video generation
+      ...(grokJobId ? { grokJobId } : {}),
     },
   })
 
