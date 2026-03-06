@@ -75,13 +75,24 @@ async function collectStorageKeys(rawValues: Array<string | null | undefined>): 
 }
 
 async function cleanupPanels(storageKeys: Set<string>): Promise<CleanupStats> {
+  type PanelRow = {
+    id: string
+    imageUrl: string | null
+    videoUrl: string | null
+    lipSyncVideoUrl: string | null
+    sketchImageUrl: string | null
+    previousImageUrl: string | null
+    candidateImages: string | null
+    imageHistory: string | null
+  }
+
   let cursor: string | null = null
   let scannedRows = 0
   let cleanedRows = 0
   let keyCandidates = 0
 
   while (true) {
-    const rows = await prisma.novelPromotionPanel.findMany({
+    const rows: PanelRow[] = await prisma.novelPromotionPanel.findMany({
       select: {
         id: true,
         imageUrl: true,
@@ -160,13 +171,20 @@ async function cleanupPanels(storageKeys: Set<string>): Promise<CleanupStats> {
 }
 
 async function cleanupStoryboards(storageKeys: Set<string>): Promise<CleanupStats> {
+  type StoryboardRow = {
+    id: string
+    storyboardImageUrl: string | null
+    candidateImages: string | null
+    imageHistory: string | null
+  }
+
   let cursor: string | null = null
   let scannedRows = 0
   let cleanedRows = 0
   let keyCandidates = 0
 
   while (true) {
-    const rows = await prisma.novelPromotionStoryboard.findMany({
+    const rows: StoryboardRow[] = await prisma.novelPromotionStoryboard.findMany({
       select: {
         id: true,
         storyboardImageUrl: true,
@@ -224,13 +242,18 @@ async function cleanupStoryboards(storageKeys: Set<string>): Promise<CleanupStat
 }
 
 async function cleanupShots(storageKeys: Set<string>): Promise<CleanupStats> {
+  type ShotRow = {
+    id: string
+    imageUrl: string | null
+  }
+
   let cursor: string | null = null
   let scannedRows = 0
   let cleanedRows = 0
   let keyCandidates = 0
 
   while (true) {
-    const rows = await prisma.novelPromotionShot.findMany({
+    const rows: ShotRow[] = await prisma.novelPromotionShot.findMany({
       select: {
         id: true,
         imageUrl: true,
@@ -277,13 +300,18 @@ async function cleanupShots(storageKeys: Set<string>): Promise<CleanupStats> {
 }
 
 async function cleanupSupplementaryPanels(storageKeys: Set<string>): Promise<CleanupStats> {
+  type SupplementaryRow = {
+    id: string
+    imageUrl: string | null
+  }
+
   let cursor: string | null = null
   let scannedRows = 0
   let cleanedRows = 0
   let keyCandidates = 0
 
   while (true) {
-    const rows = await prisma.supplementaryPanel.findMany({
+    const rows: SupplementaryRow[] = await prisma.supplementaryPanel.findMany({
       select: {
         id: true,
         imageUrl: true,
@@ -330,13 +358,18 @@ async function cleanupSupplementaryPanels(storageKeys: Set<string>): Promise<Cle
 }
 
 async function cleanupVoice(storageKeys: Set<string>): Promise<CleanupStats> {
+  type VoiceRow = {
+    id: string
+    audioUrl: string | null
+  }
+
   let cursor: string | null = null
   let scannedRows = 0
   let cleanedRows = 0
   let keyCandidates = 0
 
   while (true) {
-    const rows = await prisma.novelPromotionVoiceLine.findMany({
+    const rows: VoiceRow[] = await prisma.novelPromotionVoiceLine.findMany({
       select: {
         id: true,
         audioUrl: true,
