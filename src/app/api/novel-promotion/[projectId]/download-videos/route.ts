@@ -6,6 +6,7 @@ import { getCOSClient, toFetchableUrl } from '@/lib/cos'
 import { resolveStorageKeyFromMediaValue } from '@/lib/media/service'
 import { requireProjectAuthLight, isErrorResponse } from '@/lib/api-auth'
 import { apiHandler, ApiError } from '@/lib/api-errors'
+import { Readable } from 'stream'
 
 interface PanelData {
   panelIndex: number | null
@@ -27,6 +28,73 @@ interface ClipData {
 interface EpisodeData {
   storyboards?: StoryboardData[]
   clips?: ClipData[]
+}
+
+const SINGLE_VIDEO_TIMEOUT_MS = Number(process.env.VIDEO_DOWNLOAD_TIMEOUT_MS || 90_000)
+
+function sanitizeDescription(raw: string): string {
+  return raw.slice(0, 50).replace(/[\\/:*?"<>|]/g, '_')
+}
+
+async function fetchBufferWithTimeout(url: string, timeoutMs: number): Promise<Buffer> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const response = await fetch(toFetchableUrl(url), {
+      signal: controller.signal,
+      cache: 'no-store',
+    })
+    if (!response.ok) {
+      throw new Error(`fetch failed: ${response.status} ${response.statusText}`)
+    }
+    return Buffer.from(await response.arrayBuffer())
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function cosGetObjectWithTimeout(storageKey: string, timeoutMs: number): Promise<Buffer> {
+  const cos = getCOSClient()
+
+  return await new Promise<Buffer>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`COS getObject timeout after ${timeoutMs}ms: ${storageKey}`))
+    }, timeoutMs)
+
+    cos.getObject(
+      {
+        Bucket: process.env.COS_BUCKET!,
+        Region: process.env.COS_REGION!,
+        Key: storageKey,
+      },
+      (err, data) => {
+        clearTimeout(timer)
+        if (err) {
+          reject(err)
+          return
+        }
+        resolve(data.Body as Buffer)
+      },
+    )
+  })
+}
+
+async function loadVideoBuffer(videoUrl: string, isLocalStorage: boolean, timeoutMs: number): Promise<Buffer> {
+  const storageKey = await resolveStorageKeyFromMediaValue(videoUrl)
+
+  if (videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {
+    return await fetchBufferWithTimeout(videoUrl, timeoutMs)
+  }
+
+  if (storageKey) {
+    if (isLocalStorage) {
+      const { getSignedUrl } = await import('@/lib/cos')
+      return await fetchBufferWithTimeout(getSignedUrl(storageKey), timeoutMs)
+    }
+    return await cosGetObjectWithTimeout(storageKey, timeoutMs)
+  }
+
+  return await fetchBufferWithTimeout(videoUrl, timeoutMs)
 }
 
 export const POST = apiHandler(async (
@@ -102,7 +170,6 @@ export const POST = apiHandler(async (
     videoUrl: string
     clipIndex: number  // 使用 clip 在数组中的索引
     panelIndex: number
-    isLipSync?: boolean  // 是否为口型同步视频
   }
   const videos: VideoItem[] = []
 
@@ -129,16 +196,13 @@ export const POST = apiHandler(async (
 
       // 根据用户偏好选择视频类型
       let videoUrl: string | null = null
-      let isLipSync = false
 
       if (preferLipSync) {
         // 优先口型同步视频，其次原始视频
         videoUrl = panel.lipSyncVideoUrl || panel.videoUrl
-        isLipSync = !!panel.lipSyncVideoUrl
       } else {
         // 优先原始视频，其次口型同步视频（如果只有口型同步视频也下载）
         videoUrl = panel.videoUrl || panel.lipSyncVideoUrl
-        isLipSync = !panel.videoUrl && !!panel.lipSyncVideoUrl
       }
 
       if (videoUrl) {
@@ -147,7 +211,6 @@ export const POST = apiHandler(async (
           videoUrl: videoUrl,
           clipIndex: clipIndex >= 0 ? clipIndex : 999,  // 找不到时排最后
           panelIndex: panel.panelIndex || 0,
-          isLipSync
         })
       }
     }
@@ -173,103 +236,65 @@ export const POST = apiHandler(async (
 
   _ulogInfo(`Preparing to download ${indexedVideos.length} videos for project ${projectId}`)
 
-  const archive = archiver('zip', { zlib: { level: 9 } })
+  // 视频本身已压缩，zip 使用 store 模式减少 CPU 开销。
+  const archive = archiver('zip', { zlib: { level: 0 } })
+  const archiveStream = Readable.toWeb(archive) as ReadableStream
 
-  // 创建一个 Promise 来追踪归档完成状态
-  const archiveFinished = new Promise<void>((resolve, reject) => {
-    archive.on('end', () => resolve())
-    archive.on('error', (err) => {
-      reject(err)
-    })
+  archive.on('warning', (error) => {
+    _ulogError('Archive warning:', error)
+  })
+  archive.on('error', (error) => {
+    _ulogError('Archive error:', error)
   })
 
-  // 使用 PassThrough 流来收集数据
-  const chunks: Uint8Array[] = []
-  archive.on('data', (chunk) => {
-    chunks.push(chunk)
-  })
-
-  // 处理视频并打包
   const isLocal = process.env.STORAGE_TYPE === 'local'
+  void (async () => {
+    const failed: Array<{ index: number; reason: string; url: string }> = []
+    let successCount = 0
 
-  for (const video of indexedVideos) {
-    try {
-      _ulogInfo(`Downloading video ${video.index}: ${video.videoUrl}`)
-
-      let videoData: Buffer
-      const storageKey = await resolveStorageKeyFromMediaValue(video.videoUrl)
-
-      if (video.videoUrl.startsWith('http://') || video.videoUrl.startsWith('https://')) {
-        const response = await fetch(toFetchableUrl(video.videoUrl))
-        if (!response.ok) {
-          throw new Error(`Failed to fetch: ${response.statusText}`)
-        }
-        const arrayBuffer = await response.arrayBuffer()
-        videoData = Buffer.from(arrayBuffer)
-      } else if (storageKey) {
-        if (isLocal) {
-          const { getSignedUrl } = await import('@/lib/cos')
-          const localUrl = toFetchableUrl(getSignedUrl(storageKey))
-          const response = await fetch(localUrl)
-          if (!response.ok) {
-            throw new Error(`Failed to fetch local file: ${response.statusText}`)
-          }
-          videoData = Buffer.from(await response.arrayBuffer())
-        } else {
-          const cos = getCOSClient()
-          videoData = await new Promise<Buffer>((resolve, reject) => {
-            cos.getObject(
-              {
-                Bucket: process.env.COS_BUCKET!,
-                Region: process.env.COS_REGION!,
-                Key: storageKey
-              },
-              (err, data) => {
-                if (err) reject(err)
-                else resolve(data.Body as Buffer)
-              }
-            )
-          })
-        }
-      } else {
-        const response = await fetch(toFetchableUrl(video.videoUrl))
-        if (!response.ok) {
-          throw new Error(`Failed to fetch: ${response.statusText}`)
-        }
-        const arrayBuffer = await response.arrayBuffer()
-        videoData = Buffer.from(arrayBuffer)
+    for (const video of indexedVideos) {
+      try {
+        _ulogInfo(`Downloading video ${video.index}: ${video.videoUrl}`)
+        const videoData = await loadVideoBuffer(video.videoUrl, isLocal, SINGLE_VIDEO_TIMEOUT_MS)
+        const safeDesc = sanitizeDescription(video.description || '镜头')
+        const fileName = `${String(video.index).padStart(3, '0')}_${safeDesc}.mp4`
+        archive.append(videoData, { name: fileName })
+        successCount += 1
+        _ulogInfo(`Added ${fileName} to archive`)
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error)
+        failed.push({
+          index: video.index,
+          reason,
+          url: video.videoUrl,
+        })
+        _ulogError(`Failed to download video ${video.index}: ${reason}`)
       }
-
-      // 文件名使用描述，清理非法字符
-      const safeDesc = video.description.slice(0, 50).replace(/[\\/:*?"<>|]/g, '_')
-      const fileName = `${String(video.index).padStart(3, '0')}_${safeDesc}.mp4`
-      archive.append(videoData, { name: fileName })
-      _ulogInfo(`Added ${fileName} to archive`)
-    } catch (error) {
-      _ulogError(`Failed to download video ${video.index}:`, error)
     }
-  }
 
-  // 完成归档
-  await archive.finalize()
-  _ulogInfo('Archive finalized')
+    if (failed.length > 0) {
+      const lines = [
+        `Failed videos: ${failed.length}/${indexedVideos.length}`,
+        '',
+        ...failed.map((item) => `#${item.index} ${item.reason} | ${item.url}`),
+      ]
+      archive.append(Buffer.from(lines.join('\n'), 'utf-8'), { name: '_failed_videos.txt' })
+      _ulogInfo(`Video archive completed with failures: ${failed.length}`)
+    } else {
+      _ulogInfo(`Video archive completed successfully: ${successCount}/${indexedVideos.length}`)
+    }
 
-  // 等待归档完成
-  await archiveFinished
+    await archive.finalize()
+  })().catch((error) => {
+    _ulogError('Video archive pipeline failed:', error)
+    archive.destroy(error instanceof Error ? error : new Error(String(error)))
+  })
 
-  // 合并所有数据块
-  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0)
-  const result = new Uint8Array(totalLength)
-  let offset = 0
-  for (const chunk of chunks) {
-    result.set(chunk, offset)
-    offset += chunk.length
-  }
-
-  return new Response(result, {
+  return new Response(archiveStream, {
     headers: {
       'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(project.name)}_videos.zip"`
-    }
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(project.name)}_videos.zip"`,
+      'Cache-Control': 'no-store',
+    },
   })
 })

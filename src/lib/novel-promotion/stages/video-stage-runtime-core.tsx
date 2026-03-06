@@ -11,8 +11,6 @@ import {
 } from '@/app/[locale]/workspace/[projectId]/modes/novel-promotion/components/video'
 import { AppIcon } from '@/components/ui/icons'
 import {
-  useDownloadRemoteBlob,
-  useListProjectEpisodeVideoUrls,
   useMatchedVoiceLines,
   useUpdateProjectPanelLink,
 } from '@/lib/query/hooks'
@@ -92,9 +90,7 @@ export function useVideoStageRuntime({
   } = useVideoPanelViewport()
 
   const lipSyncMutation = useLipSync(projectId, episodeId)
-  const listEpisodeVideoUrlsMutation = useListProjectEpisodeVideoUrls(projectId)
   const updatePanelLinkMutation = useUpdateProjectPanelLink(projectId)
-  const downloadRemoteBlobMutation = useDownloadRemoteBlob()
   const matchedVoiceLinesQuery = useMatchedVoiceLines(projectId, episodeId)
 
   const { panelVideoStates, panelLipStates } = useVideoTaskStates({
@@ -138,12 +134,11 @@ export function useVideoStageRuntime({
     videosWithUrl,
     handleDownloadAllVideos,
   } = useVideoDownloadAll({
+    projectId,
     episodeId,
     t: (key) => t(key as never),
     allPanels,
     panelVideoPreference,
-    listEpisodeVideoUrlsMutation,
-    downloadRemoteBlobMutation,
   })
 
   const {
