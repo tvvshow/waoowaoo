@@ -37,7 +37,7 @@ An AI-powered tool for creating short drama / comic videos — automatically gen
 **前提条件**：安装 [Docker Desktop](https://docs.docker.com/get-docker/)
 
 ```bash
-git clone https://github.com/saturndec/waoowaoo.git
+git clone https://github.com/tvvshow/waoowaoo.git
 cd waoowaoo
 docker compose up -d
 ```
@@ -80,7 +80,7 @@ docker compose logs --tail=100 app
 **Prerequisites**: Install [Docker Desktop](https://docs.docker.com/get-docker/)
 
 ```bash
-git clone https://github.com/saturndec/waoowaoo.git
+git clone https://github.com/tvvshow/waoowaoo.git
 cd waoowaoo
 docker compose up -d
 ```
@@ -139,7 +139,7 @@ npm i -g pm2
 ### 2) 安装与构建 / Install and Build
 
 ```bash
-git clone https://github.com/saturndec/waoowaoo.git
+git clone https://github.com/tvvshow/waoowaoo.git
 cd waoowaoo
 npm install
 npx prisma generate
@@ -329,14 +329,14 @@ For `openai-compatible::*` providers, the current integration in this repo:
 
 本项目由核心团队独立维护。欢迎你通过以下方式参与：
 
-- 🐛 提交 [Issue](https://github.com/waoowaooAI/waoowaoo/issues) 反馈 Bug
-- 💡 提交 [Issue](https://github.com/waoowaooAI/waoowaoo/issues) 提出功能建议
+- 🐛 提交 [Issue](https://github.com/tvvshow/waoowaoo/issues) 反馈 Bug
+- 💡 提交 [Issue](https://github.com/tvvshow/waoowaoo/issues) 提出功能建议
 - 🔧 提交 Pull Request 供参考 — 我们会认真审阅每一个 PR 的思路，但最终由团队自行实现修复，不会直接合并外部 PR
 
 This project is maintained by the core team. You're welcome to contribute by:
 
-- 🐛 Filing [Issues](https://github.com/waoowaooAI/waoowaoo/issues) — report bugs
-- 💡 Filing [Issues](https://github.com/waoowaooAI/waoowaoo/issues) — propose features
+- 🐛 Filing [Issues](https://github.com/tvvshow/waoowaoo/issues) — report bugs
+- 💡 Filing [Issues](https://github.com/tvvshow/waoowaoo/issues) — propose features
 - 🔧 Submitting Pull Requests as references — we review every PR carefully for ideas, but the team implements fixes internally rather than merging external PRs directly
 
 ---
@@ -358,4 +358,4 @@ Special thanks to the maintainers and contributors of the upstream/reference pro
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=waoowaooAI/waoowaoo&type=date&legend=top-left)](https://www.star-history.com/#waoowaooAI/waoowaoo&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/svg?repos=tvvshow/waoowaoo&type=date&legend=top-left)](https://www.star-history.com/#tvvshow/waoowaoo&type=date&legend=top-left)
