@@ -13,24 +13,6 @@ interface UseVideoDownloadAllParams {
   panelVideoPreference: Map<string, boolean>
 }
 
-function parseDownloadFileName(contentDisposition: string | null, fallback: string): string {
-  if (!contentDisposition) return fallback
-
-  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
-  if (utf8Match?.[1]) {
-    try {
-      return decodeURIComponent(utf8Match[1])
-    } catch {
-      return utf8Match[1]
-    }
-  }
-
-  const quotedMatch = contentDisposition.match(/filename="([^"]+)"/i)
-  if (quotedMatch?.[1]) return quotedMatch[1]
-
-  return fallback
-}
-
 export function useVideoDownloadAll({
   projectId,
   episodeId,
@@ -55,40 +37,49 @@ export function useVideoDownloadAll({
         panelPreferences[panelKey] = panelVideoPreference.get(panelKey) ?? true
       })
 
-      _ulogInfo('[下载视频] 请求服务端打包...')
-      const response = await fetch(`/api/novel-promotion/${projectId}/download-videos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          episodeId,
-          panelPreferences,
-        }),
-      })
-
-      if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({})) as Record<string, unknown>
-        const message = typeof errorPayload.message === 'string' ? errorPayload.message : t('stage.downloadFailed')
-        throw new Error(message)
+      // 通过原生 form 直连下载接口，浏览器可直接处理流式附件下载，
+      // 避免 fetch + blob 必须等待整包完成导致“长时间转圈”。
+      const frameName = 'video-download-frame'
+      let iframe = document.querySelector<HTMLIFrameElement>(`iframe[name="${frameName}"]`)
+      if (!iframe) {
+        iframe = document.createElement('iframe')
+        iframe.name = frameName
+        iframe.style.display = 'none'
+        document.body.appendChild(iframe)
       }
 
-      const zipBlob = await response.blob()
-      const fallbackName = `videos_${new Date().toISOString().slice(0, 10)}.zip`
-      const fileName = parseDownloadFileName(response.headers.get('content-disposition'), fallbackName)
-      const url = window.URL.createObjectURL(zipBlob)
-      const anchor = document.createElement('a')
-      anchor.href = url
-      anchor.download = fileName
-      document.body.appendChild(anchor)
-      anchor.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(anchor)
-      _ulogInfo('[下载视频] 完成!')
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = `/api/novel-promotion/${projectId}/download-videos`
+      form.target = frameName
+      form.style.display = 'none'
+
+      const episodeField = document.createElement('input')
+      episodeField.type = 'hidden'
+      episodeField.name = 'episodeId'
+      episodeField.value = episodeId
+      form.appendChild(episodeField)
+
+      const preferencesField = document.createElement('input')
+      preferencesField.type = 'hidden'
+      preferencesField.name = 'panelPreferences'
+      preferencesField.value = JSON.stringify(panelPreferences)
+      form.appendChild(preferencesField)
+
+      document.body.appendChild(form)
+      form.submit()
+      document.body.removeChild(form)
+
+      _ulogInfo('[下载视频] 已提交服务端打包请求')
     } catch (error: unknown) {
       _ulogError('[下载视频] 错误:', error)
       alert(`${t('stage.downloadFailed')}: ${getErrorMessage(error) || t('errors.unknownError')}`)
     } finally {
-      setIsDownloading(false)
-      setDownloadProgress(null)
+      // 表单提交后下载在浏览器层继续进行，不再等待整包完成再结束 loading。
+      window.setTimeout(() => {
+        setIsDownloading(false)
+        setDownloadProgress(null)
+      }, 1200)
     }
   }, [
     allPanels,

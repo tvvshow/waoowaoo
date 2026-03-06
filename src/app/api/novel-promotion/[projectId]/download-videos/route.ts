@@ -7,6 +7,8 @@ import { resolveStorageKeyFromMediaValue } from '@/lib/media/service'
 import { requireProjectAuthLight, isErrorResponse } from '@/lib/api-auth'
 import { apiHandler, ApiError } from '@/lib/api-errors'
 import { Readable } from 'stream'
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
 
 interface PanelData {
   panelIndex: number | null
@@ -88,8 +90,10 @@ async function loadVideoBuffer(videoUrl: string, isLocalStorage: boolean, timeou
 
   if (storageKey) {
     if (isLocalStorage) {
-      const { getSignedUrl } = await import('@/lib/cos')
-      return await fetchBufferWithTimeout(getSignedUrl(storageKey), timeoutMs)
+      const uploadDirRaw = process.env.UPLOAD_DIR || './data/uploads'
+      const uploadDir = path.isAbsolute(uploadDirRaw) ? uploadDirRaw : path.join(process.cwd(), uploadDirRaw)
+      const filePath = path.join(uploadDir, storageKey)
+      return await readFile(filePath)
     }
     return await cosGetObjectWithTimeout(storageKey, timeoutMs)
   }
@@ -103,11 +107,35 @@ export const POST = apiHandler(async (
 ) => {
   const { projectId } = await context.params
 
-  // 解析请求体
-  const body = await request.json()
-  const { episodeId, panelPreferences } = body as {
-    episodeId?: string
-    panelPreferences?: Record<string, boolean>  // key: panelKey, value: true=口型同步, false=原始
+  // 解析请求体（兼容 JSON 与 form 提交）
+  let episodeId: string | undefined
+  let panelPreferences: Record<string, boolean> | undefined
+  const contentType = request.headers.get('content-type') || ''
+
+  if (contentType.includes('application/json')) {
+    const body = await request.json()
+    const parsed = body as {
+      episodeId?: string
+      panelPreferences?: Record<string, boolean>
+    }
+    episodeId = parsed.episodeId
+    panelPreferences = parsed.panelPreferences
+  } else {
+    const formData = await request.formData()
+    const rawEpisodeId = formData.get('episodeId')
+    const rawPanelPreferences = formData.get('panelPreferences')
+
+    episodeId = typeof rawEpisodeId === 'string' ? rawEpisodeId : undefined
+    if (typeof rawPanelPreferences === 'string' && rawPanelPreferences.trim()) {
+      try {
+        const parsed = JSON.parse(rawPanelPreferences) as unknown
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          panelPreferences = parsed as Record<string, boolean>
+        }
+      } catch {
+        panelPreferences = undefined
+      }
+    }
   }
 
   // 🔐 统一权限验证
