@@ -20,6 +20,7 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   [TASK_TYPE.STORY_TO_SCRIPT_RUN]: 'progress.taskType.storyToScriptRun',
   [TASK_TYPE.SCRIPT_TO_STORYBOARD_RUN]: 'progress.taskType.scriptToStoryboardRun',
   [TASK_TYPE.CLIPS_BUILD]: 'progress.taskType.clipsBuild',
+  [TASK_TYPE.MV_BOOTSTRAP]: 'progress.taskType.generic',
   [TASK_TYPE.SCREENPLAY_CONVERT]: 'progress.taskType.screenplayConvert',
   [TASK_TYPE.VOICE_ANALYZE]: 'progress.taskType.voiceAnalyze',
   [TASK_TYPE.ANALYZE_GLOBAL]: 'progress.taskType.analyzeGlobal',

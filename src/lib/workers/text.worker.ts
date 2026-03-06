@@ -33,6 +33,7 @@ import { handleAssetHubAIModifyTask } from './handlers/asset-hub-ai-modify'
 import { handleReferenceToCharacterTask } from './handlers/reference-to-character'
 import { handleShotAITask } from './handlers/shot-ai-tasks'
 import { handleCharacterProfileTask } from './handlers/character-profile'
+import { handleMvBootstrapTask } from './handlers/mv-bootstrap'
 
 type AnyObj = Record<string, unknown>
 type JsonRecord = Record<string, unknown>
@@ -620,6 +621,8 @@ async function processTextTask(job: Job<TaskJobData>) {
       return await handleAnalyzeNovelTask(job)
     case TASK_TYPE.CLIPS_BUILD:
       return await handleClipsBuildTask(job)
+    case TASK_TYPE.MV_BOOTSTRAP:
+      return await handleMvBootstrapTask(job)
     case TASK_TYPE.SCREENPLAY_CONVERT:
       return await handleScreenplayConvertTask(job)
     case TASK_TYPE.EPISODE_SPLIT_LLM:

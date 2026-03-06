@@ -56,6 +56,7 @@ export const TASK_TYPE = {
   STORY_TO_SCRIPT_RUN: 'story_to_script_run',
   SCRIPT_TO_STORYBOARD_RUN: 'script_to_storyboard_run',
   CLIPS_BUILD: 'clips_build',
+  MV_BOOTSTRAP: 'mv_bootstrap',
   SCREENPLAY_CONVERT: 'screenplay_convert',
   VOICE_ANALYZE: 'voice_analyze',
   ANALYZE_GLOBAL: 'analyze_global',
