@@ -116,6 +116,10 @@ export default function StoryboardStage({
     runningCount,
     pendingPanelCount,
     handleGenerateAllPanels,
+    isMvBootstrapSubmitting,
+    isMvVideoSubmitting,
+    bootstrapMv,
+    queueMvVideos,
   } = controller
 
   const modalRuntime = useStoryboardModalRuntime({
@@ -156,10 +160,14 @@ export default function StoryboardStage({
           runningCount={runningCount}
           pendingPanelCount={pendingPanelCount}
           isBatchSubmitting={isEpisodeBatchSubmitting}
+          isMvBootstrapSubmitting={isMvBootstrapSubmitting}
+          isMvVideoSubmitting={isMvVideoSubmitting}
           addingStoryboardGroup={addingStoryboardGroup}
           addingStoryboardGroupState={addingStoryboardGroupState}
           onDownloadAllImages={downloadAllImages}
           onGenerateAllPanels={handleGenerateAllPanels}
+          onBootstrapMv={bootstrapMv}
+          onQueueMvVideos={queueMvVideos}
           onAddStoryboardGroupAtStart={() => addStoryboardGroup(0)}
           onBack={onBack}
         />

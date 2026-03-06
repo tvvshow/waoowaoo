@@ -20,6 +20,7 @@ import { useStoryboardTaskAwareStoryboards } from './useStoryboardTaskAwareStory
 import { useStoryboardPanelAssetActions } from './useStoryboardPanelAssetActions'
 import { useStoryboardStageUiState } from './useStoryboardStageUiState'
 import { useStoryboardStageStatus } from './useStoryboardStageStatus'
+import { useStoryboardMvGeneration } from './useStoryboardMvGeneration'
 
 interface UseStoryboardStageControllerProps {
   projectId: string
@@ -190,6 +191,16 @@ export function useStoryboardStageController({
     isTransitioning,
   })
 
+  const {
+    isMvBootstrapSubmitting,
+    isMvVideoSubmitting,
+    bootstrapMv,
+    queueMvVideos,
+  } = useStoryboardMvGeneration({
+    projectId,
+    episodeId,
+  })
+
   return {
     localStoryboards, setLocalStoryboards, sortedStoryboards, expandedClips, toggleExpandedClip,
     getClipInfo, getTextPanels, getPanelEditData, updatePanelEdit, formatClipTitle, totalPanels, storyboardStartIndex,
@@ -205,5 +216,6 @@ export function useStoryboardStageController({
     retrySave,
     updatePhotographyPlanMutation, updatePanelActingNotesMutation,
     addingStoryboardGroupState, transitioningState, runningCount, pendingPanelCount, handleGenerateAllPanels,
+    isMvBootstrapSubmitting, isMvVideoSubmitting, bootstrapMv, queueMvVideos,
   }
 }

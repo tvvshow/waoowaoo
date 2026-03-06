@@ -13,10 +13,14 @@ interface StoryboardToolbarProps {
   runningCount: number
   pendingPanelCount: number
   isBatchSubmitting: boolean
+  isMvBootstrapSubmitting: boolean
+  isMvVideoSubmitting: boolean
   addingStoryboardGroup: boolean
   addingStoryboardGroupState: TaskPresentationState | null
   onDownloadAllImages: () => Promise<void>
   onGenerateAllPanels: () => Promise<void>
+  onBootstrapMv: (input: { lyrics: string; clearExisting: boolean }) => Promise<unknown>
+  onQueueMvVideos: () => Promise<unknown>
   onAddStoryboardGroupAtStart: () => void
   onBack: () => void
 }
@@ -28,10 +32,14 @@ export default function StoryboardToolbar({
   runningCount,
   pendingPanelCount,
   isBatchSubmitting,
+  isMvBootstrapSubmitting,
+  isMvVideoSubmitting,
   addingStoryboardGroup,
   addingStoryboardGroupState,
   onDownloadAllImages,
   onGenerateAllPanels,
+  onBootstrapMv,
+  onQueueMvVideos,
   onAddStoryboardGroupAtStart,
   onBack,
 }: StoryboardToolbarProps) {
@@ -45,8 +53,12 @@ export default function StoryboardToolbar({
         runningCount={runningCount}
         pendingPanelCount={pendingPanelCount}
         isBatchSubmitting={isBatchSubmitting}
+        isMvBootstrapSubmitting={isMvBootstrapSubmitting}
+        isMvVideoSubmitting={isMvVideoSubmitting}
         onDownloadAllImages={onDownloadAllImages}
         onGenerateAllPanels={onGenerateAllPanels}
+        onBootstrapMv={onBootstrapMv}
+        onQueueMvVideos={onQueueMvVideos}
         onBack={onBack}
       />
 
