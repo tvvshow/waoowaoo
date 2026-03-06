@@ -84,6 +84,7 @@
     "media:backfill-refs": "tsx scripts/media-backfill-refs.ts",
     "backup:archive-legacy-media": "tsx scripts/media-archive-legacy-refs.ts",
     "backup:unreferenced-media-index": "tsx scripts/media-build-unreferenced-index.ts",
+    "cleanup:media-nightly": "tsx --env-file=.env scripts/media-nightly-clean.ts",
     "lint": "eslint",
     "clean": "rimraf .next"
   },

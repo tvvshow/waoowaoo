@@ -201,6 +201,35 @@ pm2 restart waoowaoo-next
 > - `start:watchdog` 负责任务巡检与补偿；
 > - `start:board` 提供队列可视化面板。
 
+### 6) 每天 0 点自动清理媒体 / Nightly Media Cleanup at 00:00
+
+适用于磁盘空间紧张（例如 30G VPS）的场景。项目提供了夜间清理脚本：
+
+```bash
+npm run cleanup:media-nightly
+```
+
+默认行为：
+- 清理 **1 天前**的分镜/镜头生成图片与视频（并同步清空对应数据库字段）
+- 删除对应的本地/COS存储对象
+- 默认不清理配音音频（可通过环境变量开启）
+
+可选环境变量：
+
+```bash
+MEDIA_CLEAN_RETENTION_DAYS=1      # 保留天数，默认 1
+MEDIA_CLEAN_DRY_RUN=0             # 1=仅演练不删除，0=实际删除
+MEDIA_CLEAN_INCLUDE_VOICE=0       # 1=同时清理配音音频
+MEDIA_CLEAN_BATCH_SIZE=200
+MEDIA_CLEAN_DELETE_BATCH_SIZE=1000
+```
+
+建议在 VPS 上配置 `cron` 每天 00:00 执行：
+
+```bash
+0 0 * * * cd /root/waoowaoo && /usr/bin/npm run cleanup:media-nightly >> /root/waoowaoo/logs/media-nightly-clean.log 2>&1
+```
+
 ## 🏗️ 部署架构图 / Deployment Architecture
 
 ```mermaid
