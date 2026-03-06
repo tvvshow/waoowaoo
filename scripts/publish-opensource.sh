@@ -99,7 +99,8 @@ fi
 echo ""
 echo "=============================================="
 echo "✅ 开源版本发布成功！"
-echo "🔗 https://github.com/waoowaooAI/waoowaoo"
+PUBLIC_REPO_URL=$(git remote get-url public 2>/dev/null || echo "https://github.com/tvvshow/waoowaoo")
+echo "🔗 ${PUBLIC_REPO_URL}"
 echo "=============================================="
 echo ""
 

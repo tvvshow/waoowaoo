@@ -8,6 +8,7 @@
 </p>
 
 # waoowaoo AI 影视 Studio
+[![Repo](https://img.shields.io/badge/repo-tvvshow%2Fwaoowaoo-blue)](https://github.com/tvvshow/waoowaoo)
 >[!IMPORTANT]
 >⚠️ **测试版声明**：本项目目前处于测试初期阶段，由于暂时只有我一个人开发，存在部分 bug 和不完善之处。我们正在快速迭代更新中，欢迎进群反馈问题和需求**请及时关注项目更新！目前更新会非常频繁，后续会增加大量新功能以及优化效果，我们的目标是成为行业最强AI工具！**！
 > 
@@ -353,8 +354,6 @@ Special thanks to the maintainers and contributors of the upstream/reference pro
 ---
 
 **Made with ❤️ by waoowaoo team**
-
-## Star History
 
 ## Star History
 
