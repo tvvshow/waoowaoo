@@ -7,11 +7,18 @@ const logger = createScopedLogger({
   module: 'media.nightly-clean',
 })
 
-const BATCH_SIZE = Number.parseInt(process.env.MEDIA_CLEAN_BATCH_SIZE || '200', 10) || 200
-const RETENTION_DAYS = Math.max(0, Number.parseInt(process.env.MEDIA_CLEAN_RETENTION_DAYS || '1', 10) || 1)
+function parseEnvInt(key: string, fallback: number): number {
+  const raw = process.env[key]
+  if (!raw || !raw.trim()) return fallback
+  const parsed = Number.parseInt(raw, 10)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+const BATCH_SIZE = Math.max(1, parseEnvInt('MEDIA_CLEAN_BATCH_SIZE', 200))
+const RETENTION_DAYS = Math.max(0, parseEnvInt('MEDIA_CLEAN_RETENTION_DAYS', 1))
 const DRY_RUN = process.env.MEDIA_CLEAN_DRY_RUN === '1'
 const INCLUDE_VOICE = process.env.MEDIA_CLEAN_INCLUDE_VOICE === '1'
-const DELETE_BATCH_SIZE = Number.parseInt(process.env.MEDIA_CLEAN_DELETE_BATCH_SIZE || '1000', 10) || 1000
+const DELETE_BATCH_SIZE = Math.max(1, parseEnvInt('MEDIA_CLEAN_DELETE_BATCH_SIZE', 1000))
 
 const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000)
 
