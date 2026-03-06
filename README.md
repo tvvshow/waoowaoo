@@ -10,9 +10,9 @@
 # waoowaoo AI 影视 Studio
 [![Repo](https://img.shields.io/badge/repo-tvvshow%2Fwaoowaoo-blue)](https://github.com/tvvshow/waoowaoo)
 >[!IMPORTANT]
->⚠️ **测试版声明**：本项目目前处于测试初期阶段，由于暂时只有我一个人开发，存在部分 bug 和不完善之处。我们正在快速迭代更新中，欢迎进群反馈问题和需求**请及时关注项目更新！目前更新会非常频繁，后续会增加大量新功能以及优化效果，我们的目标是成为行业最强AI工具！**！
+>⚠️ **维护状态声明**：本仓库是基于 `waoowaoo` 的个人魔改版（自娱用途），**后续不会持续更新**。如需跟进后续功能与官方修复，请关注原仓库动态：`https://github.com/waoowaooAI/waoowaoo`。
 > 
-> ⚠️ **Beta Notice**: This project is currently in its early beta stage. As it is currently a solo-developed project, some bugs and imperfections are to be expected. We are iterating rapidly—please stay tuned for frequent updates! We are committed to rolling out a massive roadmap of new features and optimizations, with the ultimate goal of becoming the top-tier solution in the industry. Your feedback and feature requests are highly welcome!
+> ⚠️ **Maintenance Notice**: This repository is a personal customized fork of `waoowaoo` for self-use/experimentation and **will not receive ongoing updates**. For future features and official fixes, follow the upstream repository: `https://github.com/waoowaooAI/waoowaoo`.
 
 <img width="1676" height="540" alt="chat" src="https://github.com/user-attachments/assets/30c6fcf6-b605-48da-a571-7b7aead3df8d" />
 <img width="1676" height="540" alt="chat1" src="https://github.com/user-attachments/assets/40d583a2-223a-46d9-b96b-a966390d44f8" />
